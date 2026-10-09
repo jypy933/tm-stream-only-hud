@@ -1,7 +1,7 @@
 # Stream-Only HUD
 
-Lets a Trackmania streamer choose, element by element, what they see on their own screen
-and what viewers see on stream.
+An Openplanet plugin for Trackmania. Hide the splits, timer, inputs and more from your own
+screen while your viewers still see them on stream.
 
 | Element | Source |
 |---|---|
@@ -14,26 +14,85 @@ and what viewers see on stream.
 | Gear & RPM (Dashboard) | the Dashboard plugin's gearbox |
 | Speed (Dashboard) | the Dashboard plugin's speedometer |
 
-Each element has two ticks, **On my screen** and **On stream**:
+---
+
+## Streamer guide (about 2 minutes)
+
+### 1. Install the plugin (in Trackmania)
+
+1. Press **F3**.
+2. Click **Plugin Manager** at the top, then **Open manager**.
+3. Search **Stream-Only HUD** and click **Install**.
+
+A setup window opens by itself.
+
+<details>
+<summary>Installing from a folder or <code>.op</code> file instead</summary>
+
+1. Open File Explorer, paste `%USERPROFILE%\OpenplanetNext\Plugins` in the address bar and
+   press Enter.
+2. Copy the `StreamOnlyHUD` folder (or `StreamOnlyHUD.op` from the
+   [releases](https://github.com/jypy933/tm-stream-only-hud/releases)) into that window.
+3. In Trackmania press **F3 > Developer > Signature Mode > Developer**, then restart the game.
+
+Developer mode switches off online play and leaderboard records. Switch Signature Mode
+back to **Regular** to race online (the plugin stops loading until it's installed from the
+Plugin Manager). [SETUP.png](SETUP.png) shows this whole setup as one picture.
+</details>
+
+### 2. Connect it to OBS (once)
+
+1. In OBS, in the **Sources** box, click **+** and choose **Browser**. Click **OK**.
+2. In Trackmania's setup window, click **Copy OBS link** (it's `http://127.0.0.1:7878/`).
+3. Back in OBS, click in the **URL** box, delete what's there and press **Ctrl+V**.
+4. Set **Width 1920** and **Height 1080**. Click **OK**.
+5. Right-click the new source > **Transform** > **Fit to screen**.
+
+In Trackmania's window, click **Show a test picture in OBS**. A green "connected" banner
+should appear in OBS, and the window says **OBS is connected**.
+
+### 3. Choose what you see
+
+Open the window any time: **F3 > Plugins > Stream-Only HUD**. Every item has two ticks:
 
 | On my screen | On stream | Result |
 |---|---|---|
-| yes | (forced yes) | Everyone sees it. OBS captures the game as usual. |
-| no | yes | Only viewers see it. Hidden in game, redrawn by the OBS overlay. |
-| no | no | Hidden for everyone. |
+| ✔ | ✔ (locked) | Everyone sees it |
+| ✘ | ✔ | Only viewers see it |
+| ✘ | ✘ | Hidden for everyone |
 
-"On my screen but not on stream" can't exist: OBS records the screen, so anything the
-player sees is on stream. The window explains this when hovering the greyed-out tick.
+"On my screen but not on stream" isn't possible: OBS records your screen, so anything you
+can see is on stream too.
 
-**Show/hide key** (default F7, changeable or removable in the window): temporarily puts the
-stream-only elements back on the player's screen, then hides them again. Saved choices
-don't change.
+- Or click a quick choice: **Hide only the splits from me**, **Hide all times from me**,
+  **Show everything normally**.
+- **Show/hide key:** press **F7** during a run to see the hidden items yourself, and again
+  to hide them. Your ticks don't change. Change the key (or turn it off) under the list.
+- The inputs, gear and speed boxes from the **Dashboard** plugin are in the same list.
+- **Medals panel corner on stream** picks where the medals panel appears for viewers.
 
-## How it works
+### If something's wrong
 
-- **Hiding:** every native module has a root frame `frame-global` whose position the game
-  never touches. The plugin moves it off-screen. The game keeps running the module, so the
-  plugin reads exactly what it would have shown (PB diff, colours, ranks).
+- **The window says "OBS is not connected"**: the Browser source must be in the OBS scene
+  you're using. Redo step 2 in that scene.
+- **Viewers see something twice**: another plugin is drawing the same thing (for example
+  a second medals window). Turn that plugin's window off.
+- **You can still hear if you're ahead or behind**: that's the checkpoint sound. Turn it
+  down in Trackmania's audio settings.
+- **"Port is already in use"**: another program uses the same connection. Pick another port
+  in Openplanet **Settings > Stream-Only HUD > Advanced**, then copy the new link into OBS.
+- **Things look shifted or too small in OBS**: the source must be 1920 x 1080, then
+  **Transform > Fit to screen**. The test picture warns you when the size is wrong.
+
+---
+
+## For developers
+
+### How it works
+
+- **Hiding native HUD:** every native module has a root frame `frame-global` whose
+  position the game never touches. The plugin moves it off-screen. The game keeps running
+  the module, so the plugin reads exactly what it would have shown (PB diff, colours, ranks).
 - **Dashboard parts:** another plugin's drawing is part of the game picture, so it can't
   be split between screen and stream. When "On my screen" is unticked, the plugin switches
   that Dashboard part off through Openplanet's settings API (and switches it back on when
@@ -43,36 +102,33 @@ don't change.
   full-screen overlay page and a live event stream (`/events`): HUD state 10x per second,
   car inputs up to 60x per second so the pad moves smoothly. In OBS it's a 1920x1080 Browser
   Source; each element is drawn at the position the game uses, so nothing needs placing.
-- **Feedback:** the plugin sees when OBS polls, so the in-game window shows
+- **Feedback:** the plugin sees when OBS is listening, so the in-game window shows
   "OBS is connected" and warns if hidden elements aren't reaching viewers. "Show a test
   picture in OBS" displays a green banner and sample elements on stream for 30 seconds.
+- **Show/hide key:** temporarily treats stream-only elements as "on my screen"; the
+  overlay stops drawing them meanwhile so viewers never see them twice.
 
-## Getting it to the streamer (the easy way)
+### Building and publishing
 
 Unsigned plugins only load in Openplanet's Developer mode, which turns on School Mode
-(no online play, no leaderboard records). For a streamer that's a non-starter, so the
-plugin needs to be published and signed:
+(no online play, no leaderboard records), so the plugin has to be published and signed
+for normal use:
 
 1. Run `pack.ps1` to build `dist\StreamOnlyHUD.op` (or download it from the latest
-   GitHub release).
+   [release](https://github.com/jypy933/tm-stream-only-hud/releases)).
 2. On openplanet.dev, sign in, create a new plugin, upload the `.op` and ask for it to be
    signed. The Openplanet team reviews it.
-3. Once approved, the streamer installs it in game: **F3 > Plugin Manager > Open manager >
-   search "Stream-Only HUD" > Install**. Updates arrive the same way.
+3. Once approved, it installs from the in-game Plugin Manager and updates arrive the same way.
 
-Then send them [STREAMER_GUIDE.md](STREAMER_GUIDE.md) (or just the in-game window: it opens
-on its own the first time and walks through OBS).
+### Testing locally
 
-## Testing it yourself before publishing
+Copy the folder into `C:\Users\<you>\OpenplanetNext\Plugins\`, switch Openplanet to
+**Developer > Signature Mode > Developer** (needs Club access), then
+**Developer > Load plugin**. Check `Openplanet.log` for compile errors.
 
-Copy the `StreamOnlyHUD` folder into `C:\Users\<you>\OpenplanetNext\Plugins\`, switch
-Openplanet to **Developer > Signature Mode > Developer** (needs Club access, offline maps
-only), then **Developer > Load plugin**. Check `Openplanet.log` for compile errors.
+### Limits
 
-## Limits
-
-- The checkpoint **sound** still plays (higher when ahead, lower when behind). It can be
-  turned off in the game's audio settings.
+- The checkpoint **sound** still plays (higher when ahead, lower when behind).
 - If Nadeo renames a module or its control IDs, that element simply shows normally again
   in game until the IDs are updated in `src/Elements.as`.
 - Other Openplanet plugin windows can't be hidden from the player but shown on stream:
