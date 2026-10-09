@@ -1,0 +1,508 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Stream-Only HUD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  /* Full-canvas overlay: the Browser Source is 1920x1080 and each element is placed where
+     the game would draw it. --u is one ManiaLink unit (the game's screen is 320 x 180 units). */
+  :root { --u: 6px; }
+  html, body { margin: 0; width: 100%; height: 100%; background: transparent; overflow: hidden; }
+  body {
+    position: relative;
+    font-family: "Oswald", "Segoe UI", sans-serif;
+    font-variant-numeric: tabular-nums;
+    color: #fff;
+  }
+  .el { position: absolute; left: 0; top: 0; display: none; transform-origin: 0 0; }
+  .el.on { display: block; }
+  .box {
+    position: absolute; box-sizing: border-box;
+    background: rgba(0, 0, 0, .6);
+    display: flex; align-items: center; justify-content: flex-end;
+    padding: 0 calc(var(--u) * 1);
+    white-space: nowrap;
+  }
+  .hidden { display: none !important; }
+  .pop { animation: pop .25s ease-out; }
+  @keyframes pop { from { transform: scale(1.12); } }
+  .emboss { text-shadow: 0 0 calc(var(--u) * .5) rgba(0,0,0,.8), 0 calc(var(--u) * .25) 0 rgba(0,0,0,.6); }
+
+  /* Splits: two 20x8 boxes at 0.9 scale, as in the game */
+  #splits .box { width: calc(var(--u) * 18); height: calc(var(--u) * 7.2); font-size: calc(var(--u) * 4.6); }
+  #race-time { top: calc(var(--u) * 3.4); }
+  #race-diff { top: calc(var(--u) * 10.5); }
+  #lap-time  { top: calc(var(--u) * -20.6); }
+  #lap-diff  { top: calc(var(--u) * -13.4); }
+  #lap-legend { position: absolute; top: calc(var(--u) * -20.6); left: calc(var(--u) * -8); height: calc(var(--u) * 7.2); display: flex; align-items: center; font-size: calc(var(--u) * 2.8); opacity: .85; letter-spacing: .1em; }
+
+  /* Timer: centred label */
+  #timer-text { position: absolute; transform: translate(-50%, -50%); font-size: calc(var(--u) * 7.5); font-weight: 600; font-style: italic; }
+
+  /* Counter: right-aligned lines */
+  .counter-line { position: absolute; right: 0; transform: translateY(-50%); font-size: calc(var(--u) * 5.5); font-weight: 600; font-style: italic; white-space: nowrap; }
+  #counter { width: 0; }
+
+  /* Records: 50x6 rows */
+  #records-medal { position: absolute; left: calc(var(--u) * 1); top: calc(var(--u) * 1.5); font-size: calc(var(--u) * 2.8); white-space: nowrap; }
+  #records-rows { position: absolute; left: 0; top: calc(var(--u) * 7); width: calc(var(--u) * 50); }
+  .rec { display: flex; align-items: center; height: calc(var(--u) * 6); margin-bottom: calc(var(--u) * .3); background: rgba(0, 0, 0, .6); font-size: calc(var(--u) * 3); font-style: italic; }
+  .rec .rank { width: calc(var(--u) * 7); text-align: right; font-weight: 600; padding-right: calc(var(--u) * 2); }
+  .rec .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rec .score { padding: 0 calc(var(--u) * 1.5); }
+
+  /* Medals panel (drawn by the plugin, not the game) */
+  #medals { position: absolute; padding: calc(var(--u) * 1.4) calc(var(--u) * 2); background: rgba(20, 20, 24, .85); border-radius: calc(var(--u) * .8);
+            font-family: "Segoe UI", sans-serif; font-size: calc(var(--u) * 2.3); min-width: calc(var(--u) * 30); white-space: nowrap; }
+  #medals .map { font-weight: 600; }
+  #medals .by { opacity: .6; margin-bottom: calc(var(--u) * .8); }
+  #medals table { width: 100%; border-collapse: collapse; }
+  #medals td { padding: calc(var(--u) * .2) 0; }
+  #medals td:last-child { text-align: right; padding-left: calc(var(--u) * 4); font-variant-numeric: tabular-nums; }
+  #medals .dot { display: inline-block; width: calc(var(--u) * 1.4); height: calc(var(--u) * 1.4); border-radius: 50%; margin-right: calc(var(--u) * 1); vertical-align: middle; }
+  #medals tr.pb td { color: #3ff; }
+
+  /* Test picture */
+  #preview { position: absolute; left: 50%; top: calc(var(--u) * 4); transform: translateX(-50%); display: none;
+             background: #1b8f3a; padding: calc(var(--u) * 1.5) calc(var(--u) * 4); border-radius: calc(var(--u) * 1);
+             font-family: "Segoe UI", sans-serif; font-size: calc(var(--u) * 3); text-align: center; box-shadow: 0 0 calc(var(--u) * 3) rgba(0,0,0,.5); }
+  #preview small { display: block; font-size: .7em; opacity: .9; margin-top: calc(var(--u) * .5); }
+  #preview .warn { color: #ffd34d; }
+  #dash { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  body.preview .el.on { outline: 2px dashed rgba(80, 255, 120, .9); outline-offset: calc(var(--u) * 1); }
+</style>
+</head>
+<body>
+  <div id="preview">
+    ✓ Stream-Only HUD is connected
+    <small id="preview-note">This is a test picture. Viewers will see the hidden elements where the dashed boxes are.</small>
+  </div>
+
+  <div class="el" id="splits">
+    <span id="lap-legend">LAP</span>
+    <div class="box emboss" id="lap-time"></div>
+    <div class="box emboss" id="lap-diff"></div>
+    <div class="box emboss" id="race-time"></div>
+    <div class="box emboss" id="race-diff"></div>
+  </div>
+
+  <div class="el" id="timer"><div id="timer-text" class="emboss"></div></div>
+
+  <div class="el" id="counter">
+    <div class="counter-line emboss" id="counter-lap"></div>
+    <div class="counter-line emboss" id="counter-cp"></div>
+  </div>
+
+  <div class="el" id="records">
+    <div id="records-medal" class="emboss"></div>
+    <div id="records-rows"></div>
+  </div>
+
+  <div class="el" id="medals-el"><div id="medals"></div></div>
+
+  <!-- Dashboard plugin parts (inputs, gear & RPM, speed), redrawn from live car data -->
+  <canvas id="dash"></canvas>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const SAMPLE = {
+    splits:  { visible: true, race: { visible: true, time: "0:21.337", timeVisible: true, diff: "-0:00.142", diffVisible: true, diffColor: "#2626f9" }, lap: { visible: false } },
+    timer:   { visible: true, text: "0:24.81" },
+    counter: { visible: true, lap: { visible: true, text: "LAP 1/3" }, cp: { visible: true, text: "CP 2/5", y: -12 } },
+    records: { visible: true, medal: { visible: true, name: "Gold", time: "0:45.000" },
+               rows: [{ rank: "1", name: "Player One", score: "0:41.902" }, { rank: "2", name: "Player Two", score: "0:42.117" }, { rank: "3", name: "You", score: "0:42.717" }] },
+    medals:  { visible: true, corner: 0, map: "150th Map Special - Straightline it", mapAuthor: "OneMap", author: 42398, gold: 45000, silver: 51000, bronze: 64000, pb: 42717 },
+  };
+  const DEFAULT_POS = { splits: [-10, 45], timer: [0, -80], counter: [155.7, 80], records: [-160, 30] };
+
+  let unit = 6;
+  function resize() {
+    unit = window.innerWidth / 320;
+    document.documentElement.style.setProperty("--u", unit + "px");
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  // ManiaLink (x right, y up, origin at centre) -> pixels
+  function place(el, s, key) {
+    const [dx, dy] = DEFAULT_POS[key];
+    const x = s.x ?? dx, y = s.y ?? dy, scale = s.scale || 1;
+    el.style.transform = `translate(${(160 + x) * unit}px, ${(90 - y) * unit}px) scale(${scale})`;
+  }
+
+  function show(el, on) { el.classList.toggle("on", !!on); return !!on; }
+
+  function diffColour(p) {
+    if (p.diffColor && p.diffColor !== "#000000") return p.diffColor;
+    if ((p.diff || "").startsWith("-")) return "#2626f9";
+    if ((p.diff || "").startsWith("+")) return "#f92626";
+    return "#7f7f7f";
+  }
+
+  let lastSplit = "";
+  function renderSplits(s) {
+    const el = $("splits");
+    if (!show(el, s && s.visible)) { lastSplit = ""; return; }
+    place(el, s, "splits");
+    for (const name of ["race", "lap"]) {
+      const p = s[name] || {};
+      const on = !!p.visible;
+      const t = $(name + "-time"), d = $(name + "-diff");
+      t.textContent = p.time || ""; d.textContent = p.diff || "";
+      t.classList.toggle("hidden", !on || !p.timeVisible);
+      d.classList.toggle("hidden", !on || !p.diffVisible);
+      d.style.background = diffColour(p) + "cc";
+      if (name === "lap") $("lap-legend").classList.toggle("hidden", !on);
+    }
+    const key = (s.race || {}).time + "|" + (s.lap || {}).time;
+    if (key !== lastSplit) {
+      lastSplit = key;
+      for (const b of el.querySelectorAll(".box")) { b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); }
+    }
+  }
+
+  function renderTimer(s) {
+    const el = $("timer");
+    if (!show(el, s && s.visible)) return;
+    place(el, s, "timer");
+    $("timer-text").textContent = s.text || "";
+  }
+
+  function renderCounter(s) {
+    const el = $("counter");
+    if (!show(el, s && s.visible)) return;
+    place(el, s, "counter");
+    const lap = s.lap || {}, cp = s.cp || {};
+    $("counter-lap").textContent = lap.text || "";
+    $("counter-lap").classList.toggle("hidden", !lap.visible);
+    $("counter-cp").textContent = cp.text || "";
+    $("counter-cp").classList.toggle("hidden", !cp.visible);
+    $("counter-cp").style.top = (-(cp.y || 0) * unit) + "px";
+  }
+
+  function renderRecords(s) {
+    const el = $("records");
+    if (!show(el, s && s.visible)) return;
+    place(el, s, "records");
+    const m = s.medal || {};
+    $("records-medal").textContent = m.visible ? `Next: ${m.name} ${m.time}` : "";
+    const rows = $("records-rows");
+    rows.replaceChildren(...(s.rows || []).map(r => {
+      const row = document.createElement("div");
+      row.className = "rec";
+      for (const [cls, text] of [["rank", r.rank], ["name", r.name], ["score", r.score]]) {
+        const c = document.createElement("span"); c.className = cls; c.textContent = text; row.append(c);
+      }
+      return row;
+    }));
+  }
+
+  function fmt(ms) {
+    if (!(ms > 0)) return "-";
+    const m = Math.floor(ms / 60000), s = Math.floor(ms / 1000) % 60, f = ms % 1000;
+    return `${m}:${String(s).padStart(2, "0")}.${String(f).padStart(3, "0")}`;
+  }
+
+  function renderMedals(s) {
+    const el = $("medals-el");
+    if (!show(el, s && s.visible)) return;
+    const panel = $("medals");
+    const margin = 2 * unit, corner = s.corner || 0;
+    panel.style.left = panel.style.right = panel.style.top = panel.style.bottom = "auto";
+    el.style.position = "fixed"; el.style.inset = "0"; el.style.transform = "none";
+    if (corner === 0 || corner === 2) panel.style.right = margin + "px"; else panel.style.left = margin + "px";
+    if (corner === 0 || corner === 1) panel.style.top = margin + "px"; else panel.style.bottom = margin + "px";
+
+    const rows = [
+      ["Author", s.author, "#1db954"], ["Gold", s.gold, "#f5c518"], ["Silver", s.silver, "#c9c9c9"], ["Bronze", s.bronze, "#c97b3a"],
+    ];
+    if (s.pb > 0) {
+      const at = rows.findIndex(r => s.pb <= r[1]);
+      rows.splice(at < 0 ? rows.length : at, 0, ["Pers. Best", s.pb, "#33ffff", true]);
+    }
+    panel.replaceChildren();
+    const title = document.createElement("div"); title.className = "map"; title.textContent = s.map || "";
+    const by = document.createElement("div"); by.className = "by"; by.textContent = s.mapAuthor ? "by " + s.mapAuthor : "";
+    const table = document.createElement("table");
+    for (const [name, time, colour, isPb] of rows) {
+      const tr = table.insertRow(); if (isPb) tr.className = "pb";
+      const a = tr.insertCell(), b = tr.insertCell();
+      const dot = document.createElement("span"); dot.className = "dot"; dot.style.background = colour;
+      a.append(dot, name); b.textContent = fmt(time);
+    }
+    panel.append(title, by, table);
+  }
+
+  function render(state) {
+    const preview = !!state.preview;
+    document.body.classList.toggle("preview", preview);
+    $("preview").style.display = preview ? "block" : "none";
+    const els = state.elements || {};
+    const pick = key => {
+      if (!(key in els)) return null;
+      // In the test picture, show sample content where real content is missing.
+      return preview ? { ...SAMPLE[key], ...pickPos(els[key]), visible: true } : els[key];
+    };
+    renderSplits(pick("splits"));
+    renderTimer(pick("timer"));
+    renderCounter(pick("counter"));
+    renderRecords(pick("records"));
+    renderMedals(pick("medals") && (preview ? { ...SAMPLE.medals, corner: els.medals.corner, visible: true } : els.medals));
+    dash = { preview, inputs: els.inputs || null, gearbox: els.gearbox || null, speed: els.speed || null };
+
+    if (preview) {
+      const ratio = window.innerWidth / window.innerHeight;
+      const note = $("preview-note");
+      const keys = Object.keys(els);
+      if (Math.abs(ratio - 16 / 9) > 0.03) {
+        note.innerHTML = `<span class="warn">Size is ${window.innerWidth}x${window.innerHeight}: set Width 1920 and Height 1080 in the source properties.</span>`;
+      } else if (keys.length === 0) {
+        note.textContent = "Nothing is hidden from you yet, so there is nothing extra to show. Untick \"On my screen\" for an element in the game.";
+      } else {
+        note.textContent = "This is a test picture. Viewers will see the hidden elements where the dashed boxes are.";
+      }
+    }
+  }
+
+  function pickPos(s) {
+    const out = {};
+    if (s && s.attached) { out.x = s.x; out.y = s.y; out.scale = s.scale; }
+    return out;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dashboard parts. Ported from the Dashboard plugin's drawing code (by Miss) so the
+  // stream copy uses the streamer's own layout and colours. Units are game pixels.
+  // ---------------------------------------------------------------------------
+  let dash = { preview: false, inputs: null, gearbox: null, speed: null };
+  let vehicle = { on: false };
+  const canvas = $("dash"), ctx = canvas.getContext("2d");
+
+  function liveOrSample() {
+    if (!dash.preview || vehicle.on) return vehicle;
+    const t = performance.now() / 1000;   // gentle fake driving for the test picture
+    return { on: true, steer: Math.sin(t * 1.3), gas: (Math.sin(t * 2) > -0.3) ? 1 : 0, brake: (Math.sin(t * 2) < -0.7) ? 1 : 0,
+             gear: 1 + Math.floor((t % 10) / 2), rpm: 6000 + 4500 * Math.abs(Math.sin(t * 1.7)), speed: 300 + 150 * Math.sin(t / 2) };
+  }
+
+  const DEF = {
+    gamepad: { Spacing: 10, MiddleScale: 0.2, ArrowPadding: 0.15, BorderWidth: 3, EmptyFillColor: "rgba(0,0,0,0.7)",
+               FillColor: "rgba(255,51,153,1)", BorderColor: "rgba(255,255,255,1)", UpDownSymbols: true, TextColor: "rgba(255,255,255,1)", Style: 0 },
+    keyboard: { Shape: 0, Spacing: 10, BorderWidth: 3, BorderRadius: 5, EmptyFillColor: "rgba(0,0,0,0.7)", FillColor: "rgba(255,51,153,1)",
+                BorderColor: "rgba(255,255,255,1)", InactiveAlpha: 1 },
+    gearbox: { ShowText: true, ShowTachometer: true, TachometerStyle: 2, Downshift: 6500, Upshift: 10000, BackdropColor: "rgba(0,0,0,0.7)",
+               BorderColor: "rgba(255,255,255,1)", BorderWidth: 3, BorderRadius: 5, Spacing: 10, LowRPMColor: "rgba(255,178,0,1)",
+               MidRPMColor: "rgba(0,229,0,1)", HighRPMColor: "rgba(204,0,0,1)", TextColor: "rgba(255,255,255,1)", FontSize: 24 },
+    speed: { BackdropColor: "rgba(0,0,0,0.7)", BorderColor: "rgba(255,255,255,1)", TextColor: "rgba(255,255,255,1)", BorderWidth: 3, BorderRadius: 5, FontSize: 24 },
+  };
+
+  function st(part, prefix, defaults) {
+    return n => {
+      const v = part.style ? part.style[prefix + n] : undefined;
+      return v === undefined ? defaults[n] : v;
+    };
+  }
+
+  function rr(q, x, y, w, h, r) {
+    if (q.roundRect) q.roundRect(x, y, w, h, Math.max(0, Math.min(r, w / 2, h / 2))); else q.rect(x, y, w, h);
+    return q;
+  }
+
+  // Fill a shape, clipped to a rectangle (Dashboard's nvg::Scissor).
+  function fillClipped(shape, colour, x, y, w, h) {
+    if (!(w > 0) || !(h > 0)) return;
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    ctx.fillStyle = colour; ctx.fill(shape); ctx.restore();
+  }
+
+  function chevron(cx, cy, s, dir, colour) { // dir: up, down, left, right
+    ctx.save(); ctx.strokeStyle = colour; ctx.lineWidth = s * 0.18; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.beginPath();
+    const a = s * 0.35, b = s * 0.17;
+    if (dir === "up" || dir === "down") {
+      const d = dir === "up" ? -1 : 1;
+      ctx.moveTo(cx - a, cy - d * b); ctx.lineTo(cx, cy + d * b); ctx.lineTo(cx + a, cy - d * b);
+    } else {
+      const d = dir === "left" ? -1 : 1;
+      ctx.moveTo(cx - d * b, cy - a); ctx.lineTo(cx + d * b, cy); ctx.lineTo(cx - d * b, cy + a);
+    }
+    ctx.stroke(); ctx.restore();
+  }
+
+  function drawGamepad(p, size, v) {
+    const S = st(p, "Setting_Gamepad_", DEF.gamepad);
+    const spacing = S("Spacing"), mid = S("MiddleScale"), arrowPad = S("ArrowPadding");
+    const leftSize = size.x * (0.5 - mid / 2) - spacing, midX = leftSize + spacing, midSize = size.x * mid;
+    const rightX = midX + midSize + spacing, rightSize = size.x - rightX;
+    const topSize = size.y / 2 - spacing / 2, bottomY = size.y / 2 + spacing / 2, bottomSize = size.y - bottomY;
+    const steerL = v.steer < 0 ? -v.steer : 0, steerR = v.steer > 0 ? v.steer : 0;
+    ctx.lineWidth = S("BorderWidth"); ctx.strokeStyle = S("BorderColor"); ctx.lineJoin = "round";
+
+    const part = (shape, fx, fy, fw, fh) => {
+      ctx.fillStyle = S("EmptyFillColor"); ctx.fill(shape);
+      fillClipped(shape, S("FillColor"), fx, fy, fw, fh);
+      ctx.stroke(shape);
+    };
+    const left = new Path2D(); left.moveTo(0, size.y / 2); left.lineTo(leftSize, size.y * arrowPad); left.lineTo(leftSize, size.y - size.y * arrowPad); left.closePath();
+    const right = new Path2D(); right.moveTo(rightX + rightSize, size.y / 2); right.lineTo(rightX, size.y * arrowPad); right.lineTo(rightX, size.y - size.y * arrowPad); right.closePath();
+    part(left, leftSize - steerL * leftSize, 0, steerL * leftSize, size.y);
+    part(right, rightX, 0, steerR * rightSize, size.y);
+    part(rr(new Path2D(), midX, 0, midSize, topSize, 5), midX, topSize - v.gas * topSize, midSize, v.gas * topSize);
+    part(rr(new Path2D(), midX, bottomY, midSize, bottomSize, 5), midX, bottomY, midSize, v.brake * bottomSize);
+    if (S("UpDownSymbols")) {
+      chevron(midX + midSize / 2, topSize / 2, midSize / 2, "up", S("TextColor"));
+      chevron(midX + midSize / 2, bottomY + bottomSize / 2, midSize / 2, "down", S("TextColor"));
+    }
+  }
+
+  function drawKeyboard(p, size, v) {
+    const S = st(p, "Setting_Keyboard_", DEF.keyboard);
+    const spacing = S("Spacing"), shapeType = S("Shape"); // 0 Rectangle, 1 Ellipse, 2 Compact
+    const key = { x: (size.x - spacing * 2) / 3, y: (size.y - spacing) / 2 };
+    const side = { ...key };
+    const up = { x: key.x + spacing, y: 0 }, down = { x: key.x + spacing, y: key.y + spacing };
+    const left = { x: 0, y: key.y + spacing }, right = { x: key.x * 2 + spacing * 2, y: key.y + spacing };
+    if (shapeType === 2) { side.y = size.y; left.y = 0; right.y = 0; }
+    const steerL = v.steer < 0 ? -v.steer : 0, steerR = v.steer > 0 ? v.steer : 0;
+
+    const one = (pos, sz, value, fillDir, dir) => {
+      const shape = new Path2D();
+      if (shapeType === 1) shape.ellipse(pos.x + sz.x / 2, pos.y + sz.y / 2, sz.x / 2, sz.y / 2, 0, 0, Math.PI * 2);
+      else rr(shape, pos.x, pos.y, sz.x, sz.y, S("BorderRadius"));
+      ctx.fillStyle = S("EmptyFillColor"); ctx.fill(shape);
+      if (fillDir === 0) {
+        if (Math.abs(value) > 0.1) { ctx.fillStyle = S("FillColor"); ctx.fill(shape); }
+      } else if (value > 0) {
+        const w = value * sz.x;
+        fillClipped(shape, S("FillColor"), fillDir < 0 ? pos.x + sz.x - w : pos.x, pos.y, w, sz.y);
+      }
+      const inactive = S("InactiveAlpha");
+      ctx.save();
+      ctx.globalAlpha = fillDir === 0 ? (Math.abs(value) > 0.1 ? 1 : inactive) : inactive + (1 - inactive) * value;
+      ctx.lineWidth = S("BorderWidth"); ctx.strokeStyle = S("BorderColor"); ctx.stroke(shape);
+      chevron(pos.x + sz.x / 2, pos.y + sz.y / 2, sz.x / 2, dir, S("BorderColor"));
+      ctx.restore();
+    };
+    one(up, key, v.gas, 0, "up");
+    one(down, key, v.brake, 0, "down");
+    one(left, side, steerL, -1, "left");
+    one(right, side, steerR, 1, "right");
+  }
+
+  function drawGearbox(p, size, v) {
+    const S = st(p, "Setting_Gearbox_", DEF.gearbox);
+    const maxRpm = 11000, minRpm = 200, rpm = v.rpm || 0, radius = S("BorderRadius");
+    ctx.lineWidth = S("BorderWidth"); ctx.strokeStyle = S("BorderColor");
+    let x = 0, w = size.x;
+    if (S("ShowText")) {
+      const nw = S("ShowTachometer") ? size.y : size.x;
+      const box = rr(new Path2D(), 0, 0, nw, size.y, radius);
+      ctx.fillStyle = S("BackdropColor"); ctx.fill(box); ctx.stroke(box);
+      ctx.fillStyle = S("TextColor"); ctx.font = `bold ${S("FontSize")}px "Segoe UI", sans-serif`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(String(v.gear ?? ""), nw / 2, size.y / 2);
+      x += size.y + S("Spacing"); w -= size.y + S("Spacing");
+    }
+    if (!S("ShowTachometer")) return;
+    const down = S("Downshift"), upshift = S("Upshift");
+    const colourAt = r => r <= down ? S("LowRPMColor") : r <= upshift ? S("MidRPMColor") : S("HighRPMColor");
+    const bar = rr(new Path2D(), x, 0, w, size.y, radius);
+    ctx.fillStyle = S("BackdropColor"); ctx.fill(bar);
+    const style = S("TachometerStyle"); // 0 Bar, 1 Dots, 2 Blocks
+    if (style === 0) {
+      const rpmW = rpm / maxRpm * w, downW = down / maxRpm * w, upW = (maxRpm - upshift) / maxRpm * w, midW = w - downW - upW;
+      if (rpm > minRpm) fillClipped(bar, S("LowRPMColor"), x, 0, Math.min(rpmW, downW), size.y);
+      if (rpm > down) fillClipped(bar, S("MidRPMColor"), x + downW, 0, Math.min(rpmW - downW, midW), size.y);
+      if (rpm > upshift) fillClipped(bar, S("HighRPMColor"), x + downW + midW, 0, Math.min(rpmW - downW - midW, upW), size.y);
+    } else if (style === 1) {
+      const sp = { x: 12, y: 20 }, dot = size.y - sp.y * 2, space = dot + sp.x, n = Math.floor((w - sp.x) / space);
+      for (let i = 0; i < n; i++) {
+        const scaled = i / n * maxRpm;
+        ctx.beginPath(); ctx.arc(x + (i + 0.5) * space + sp.x, size.y / 2, Math.max(dot / 2, 1), 0, Math.PI * 2);
+        ctx.fillStyle = (rpm > minRpm && rpm >= scaled) ? colourAt(scaled) : S("BackdropColor"); ctx.fill();
+      }
+    } else {
+      const pad = 8, gap = 4, bw = 6, bh = size.y - pad * 2, space = bw + gap, n = Math.floor((w - pad) / space);
+      for (let i = 0; i < n; i++) {
+        const scaled = i / n * maxRpm;
+        ctx.fillStyle = (rpm > minRpm && rpm >= scaled) ? colourAt(scaled) : S("BackdropColor");
+        ctx.fill(rr(new Path2D(), x + i * space + pad, pad, bw, bh, 4));
+      }
+    }
+    ctx.stroke(bar);
+  }
+
+  function drawSpeed(p, size, v) {
+    const S = st(p, "Setting_Speed_", DEF.speed);
+    const box = rr(new Path2D(), 0, 0, size.x, size.y, S("BorderRadius"));
+    ctx.fillStyle = S("BackdropColor"); ctx.fill(box);
+    ctx.lineWidth = S("BorderWidth"); ctx.strokeStyle = S("BorderColor"); ctx.stroke(box);
+    ctx.fillStyle = S("TextColor"); ctx.font = `${S("FontSize")}px "Segoe UI", sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(String(Math.round(v.speed || 0)), size.x / 2, size.y / 2);
+  }
+
+  const DRAW = {
+    inputs: (p, size, v) => (p.padType === "keyboard" ? drawKeyboard : drawGamepad)(p, size, v),
+    gearbox: drawGearbox,
+    speed: drawSpeed,
+  };
+
+  function drawDash() {
+    const dpr = window.devicePixelRatio || 1;
+    const W = window.innerWidth, H = window.innerHeight;
+    if (canvas.width !== Math.round(W * dpr) || canvas.height !== Math.round(H * dpr)) {
+      canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const v = liveOrSample();
+    if (v.on) {
+      for (const part of ["inputs", "gearbox", "speed"]) {
+        const p = dash[part];
+        if (!p || !p.pos || !p.size) continue;
+        // Dashboard places things at pos * (screen - size), in game pixels; scale that to this page.
+        const screen = p.screen && p.screen.x > 0 ? p.screen : { x: 1920, y: 1080 };
+        const k = W / screen.x * dpr;
+        ctx.setTransform(k, 0, 0, k, p.pos.x * (screen.x - p.size.x) * k, p.pos.y * (screen.y - p.size.y) * k);
+        DRAW[part](p, p.size, v);
+        if (dash.preview) {
+          ctx.save(); ctx.setLineDash([8, 6]); ctx.lineWidth = 2; ctx.strokeStyle = "rgba(80,255,120,.9)";
+          ctx.strokeRect(-8, -8, p.size.x + 16, p.size.y + 16); ctx.restore();
+        }
+      }
+    }
+    requestAnimationFrame(drawDash);
+  }
+  requestAnimationFrame(drawDash);
+
+  // ---------------------------------------------------------------------------
+  // Connection: a live event stream from the plugin, with polling as a fallback.
+  // ---------------------------------------------------------------------------
+  function disconnected() {
+    render({ elements: {} });
+    vehicle = { on: false };
+  }
+
+  async function poll() {
+    try {
+      const r = await fetch("/state", { cache: "no-store" });
+      render(await r.json());
+    } catch (e) {
+      disconnected(); // game closed or plugin reloading: draw nothing and keep retrying
+    }
+    setTimeout(poll, 100);
+  }
+
+  if (window.EventSource) {
+    const es = new EventSource("/events");
+    es.addEventListener("state", e => render(JSON.parse(e.data)));
+    es.addEventListener("vehicle", e => { vehicle = JSON.parse(e.data); });
+    es.onerror = disconnected; // EventSource reconnects by itself
+  } else {
+    poll();
+  }
+</script>
+</body>
+</html>
