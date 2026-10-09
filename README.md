@@ -16,9 +16,14 @@ screen while your viewers still see them on stream.
 
 ---
 
-## Streamer guide (about 2 minutes)
+## Streamer guide
 
-### 1. Install the plugin (in Trackmania)
+![Stream-Only HUD setup: copy the folder, turn it on, connect OBS, choose what you see](SETUP.png)
+
+<details>
+<summary>Text version of the guide</summary>
+
+#### 1. Install the plugin (in Trackmania)
 
 1. Press **F3**.
 2. Click **Plugin Manager** at the top, then **Open manager**.
@@ -37,10 +42,10 @@ A setup window opens by itself.
 
 Developer mode switches off online play and leaderboard records. Switch Signature Mode
 back to **Regular** to race online (the plugin stops loading until it's installed from the
-Plugin Manager). [SETUP.png](SETUP.png) shows this whole setup as one picture.
+Plugin Manager). The picture above follows this route.
 </details>
 
-### 2. Connect it to OBS (once)
+#### 2. Connect it to OBS (once)
 
 1. In OBS, in the **Sources** box, click **+** and choose **Browser**. Click **OK**.
 2. In Trackmania's setup window, click **Copy OBS link** (it's `http://127.0.0.1:7878/`).
@@ -51,7 +56,7 @@ Plugin Manager). [SETUP.png](SETUP.png) shows this whole setup as one picture.
 In Trackmania's window, click **Show a test picture in OBS**. A green "connected" banner
 should appear in OBS, and the window says **OBS is connected**.
 
-### 3. Choose what you see
+#### 3. Choose what you see
 
 Open the window any time: **F3 > Plugins > Stream-Only HUD**. Every item has two ticks:
 
@@ -71,7 +76,7 @@ can see is on stream too.
 - The inputs, gear and speed boxes from the **Dashboard** plugin are in the same list.
 - **Medals panel corner on stream** picks where the medals panel appears for viewers.
 
-### If something's wrong
+#### If something's wrong
 
 - **The window says "OBS is not connected"**: the Browser source must be in the OBS scene
   you're using. Redo step 2 in that scene.
@@ -83,6 +88,8 @@ can see is on stream too.
   in Openplanet **Settings > Stream-Only HUD > Advanced**, then copy the new link into OBS.
 - **Things look shifted or too small in OBS**: the source must be 1920 x 1080, then
   **Transform > Fit to screen**. The test picture warns you when the size is wrong.
+
+</details>
 
 ---
 
