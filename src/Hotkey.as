@@ -20,7 +20,7 @@ namespace Hotkey {
         }
         UI::Text("\\$fff" + KeyName());
         UI::SameLine();
-        if (UI::Button(Icons::Keyboard + " Change")) g_capturing = true;
+        if (UI::Button(Icons::KeyboardO + " Change")) g_capturing = true;
         if (S_KeyEnabled) {
             UI::SameLine();
             if (UI::Button(Icons::Times + " No key")) {

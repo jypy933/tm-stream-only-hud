@@ -275,6 +275,30 @@
   // ---------------------------------------------------------------------------
   // Dashboard parts. Ported from the Dashboard plugin's drawing code (by Miss) so the
   // stream copy uses the streamer's own layout and colours. Units are game pixels.
+  //
+  // The ported code is from https://github.com/codecat/tm-dashboard, under this license:
+  //
+  // MIT License
+  //
+  // Copyright (c) 2021 - 2024 Melissa Geels
+  //
+  // Permission is hereby granted, free of charge, to any person obtaining a copy
+  // of this software and associated documentation files (the "Software"), to deal
+  // in the Software without restriction, including without limitation the rights
+  // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  // copies of the Software, and to permit persons to whom the Software is
+  // furnished to do so, subject to the following conditions:
+  //
+  // The above copyright notice and this permission notice shall be included in all
+  // copies or substantial portions of the Software.
+  //
+  // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  // SOFTWARE.
   // ---------------------------------------------------------------------------
   let dash = { preview: false, inputs: null, gearbox: null, speed: null };
   let vehicle = { on: false };
@@ -495,11 +519,41 @@
     setTimeout(poll, 100);
   }
 
-  if (window.EventSource) {
+  // Self-healing event stream. A connection that opened but ended before any message, or one
+  // the browser gave up on (readyState CLOSED), is a failure; after 3 in a row, poll instead.
+  // While the game is closed the connection never opens, so that doesn't count: the browser
+  // just keeps retrying until the plugin is back.
+  let failures = 0;
+
+  function connect() {
     const es = new EventSource("/events");
-    es.addEventListener("state", e => render(JSON.parse(e.data)));
-    es.addEventListener("vehicle", e => { vehicle = JSON.parse(e.data); });
-    es.onerror = disconnected; // EventSource reconnects by itself
+    let opened = false, gotMessage = false;
+    const onMessage = fn => e => {
+      gotMessage = true;
+      failures = 0;
+      fn(e);
+    };
+    es.onopen = () => { opened = true; };
+    es.addEventListener("state", onMessage(e => render(JSON.parse(e.data))));
+    es.addEventListener("vehicle", onMessage(e => { vehicle = JSON.parse(e.data); }));
+    es.onerror = () => {
+      disconnected();
+      const closed = es.readyState === EventSource.CLOSED;
+      if (!gotMessage && (opened || closed)) failures++;
+      opened = gotMessage = false;   // judge the browser's next attempt on its own
+      if (failures >= 3) {
+        es.close();
+        poll(); // the stream doesn't work here: fall back to polling for good
+      } else if (closed) {
+        es.close();
+        setTimeout(connect, 1000);
+      }
+      // otherwise the browser is already reconnecting by itself
+    };
+  }
+
+  if (window.EventSource) {
+    connect();
   } else {
     poll();
   }

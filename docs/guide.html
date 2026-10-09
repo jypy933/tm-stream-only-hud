@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stream-Only HUD guide</title>
+<meta name="viewport" content="width=1080">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,600;1,700;1,800&family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#12151d; --card:#1b202c; --card2:#222839; --line:#2d3550;
+  --text:#e9ecf5; --dim:#aab2c8; --accent:#4458ff; --accent2:#9aa6ff;
+  --green:#5fe3a1; --amber:#ffc15a; --code:#10131b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg)}
+body{width:1080px;font-family:'Inter',sans-serif;font-size:24px;line-height:1.45;color:var(--text);padding:56px 40px 48px}
+b,strong{font-weight:700;color:#fff}
+.mono,code{font-family:'JetBrains Mono',monospace}
+.eyebrow{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:24px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+h1{font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:800;font-size:132px;line-height:.95;letter-spacing:-.01em;color:#fff;margin:14px 0 22px}
+.tag{font-size:30px;line-height:1.4;color:var(--dim);max-width:900px}
+.tag b{color:#fff}
+.card{background:var(--card);border-radius:22px;padding:34px 34px 36px;margin-top:36px}
+.card-h{display:flex;align-items:center;gap:20px;margin-bottom:26px}
+.cp{background:var(--accent);color:#fff;font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:800;font-size:30px;padding:4px 16px 4px 14px;transform:skewX(-10deg);letter-spacing:.02em}
+.cp span{display:inline-block;transform:skewX(10deg)}
+h2{font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:800;font-size:60px;line-height:1;color:#fff}
+.where{margin-left:auto;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:24px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.step{display:flex;gap:22px;align-items:flex-start;margin-top:22px}
+.step:first-of-type{margin-top:0}
+.n{flex:0 0 40px;height:40px;border-radius:50%;background:#2c3470;color:#c9d0ff;font-weight:700;font-size:24px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.step .body{flex:1;min-width:0}
+.key{display:inline-block;white-space:nowrap;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:22px;background:#2a3042;border:1px solid #3d4666;border-bottom-width:3px;border-radius:7px;padding:0 10px;color:#fff;line-height:1.4}
+.codebox{font-family:'JetBrains Mono',monospace;font-size:24px;background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 20px;margin-top:12px;color:#e9ecf5;word-break:break-all}
+.note{color:var(--dim);margin-top:12px}
+.size{display:flex;gap:18px;margin-top:14px}
+.size div{background:var(--card2);border-radius:10px;padding:8px 18px;color:var(--dim)}
+.size b{font-family:'JetBrains Mono',monospace;background:var(--code);border-radius:6px;padding:2px 12px;margin-left:10px;color:#fff}
+.banner{display:inline-block;background:#1f9d55;color:#fff;font-weight:700;border-radius:8px;padding:10px 22px;margin-top:14px}
+.heads{border:2px solid #b27a1c;background:#3d2e17;color:#f5deb0;border-radius:14px;padding:18px 24px;margin-top:26px;line-height:1.45}
+.heads b{color:var(--amber)}
+.sub{margin-top:30px;background:var(--card2);border:1px dashed #3d4666;border-radius:18px;padding:28px 30px 30px}
+.sub h3{font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:800;font-size:40px;line-height:1.05;color:#fff;margin-bottom:20px}
+.sub .step .n{background:#33397a}
+.sub .heads{margin-top:22px}
+table{width:100%;border-collapse:collapse}
+th{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);text-align:left;padding:14px 18px;background:#232a3d}
+td{padding:14px 18px;border-top:1px solid #2a3150;vertical-align:middle}
+.tbl{border-radius:14px;overflow:hidden;background:#1f2536}
+.elem td:first-child{font-weight:600;width:44%}
+.elem td:last-child{color:var(--dim)}
+.elem code{font-size:21px;color:#c3caff}
+.cb{display:inline-block;width:32px;height:32px;border-radius:7px;border:2px solid #6a7396;vertical-align:middle;position:relative}
+.cb.on{background:var(--accent);border-color:var(--accent)}
+.cb.on:after{content:"";position:absolute;left:9px;top:3px;width:9px;height:17px;border:solid #fff;border-width:0 4px 4px 0;transform:rotate(45deg)}
+.cb.lock{opacity:.6}
+.res-a{color:var(--accent2);font-weight:700}.res-b{color:var(--green);font-weight:700}.res-c{color:#9aa1b8;font-weight:700}
+td.c,th.c{text-align:center}
+.pills{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.pill{background:#2a3042;border-radius:999px;padding:7px 18px;font-size:22px;white-space:nowrap;color:#e1e6f5}
+.f7{display:flex;gap:22px;align-items:center;background:#262f6b;border-radius:14px;padding:20px 24px;margin-top:26px;line-height:1.4}
+.f7 .big{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:36px;background:var(--code);border-radius:8px;padding:8px 18px;color:#fff;flex:0 0 auto}
+.f7 b{color:#fff}
+ul.b{list-style:none;margin-top:20px}
+ul.b li{position:relative;padding-left:34px;margin-top:12px}
+ul.b li:before{content:"";position:absolute;left:6px;top:15px;width:11px;height:11px;background:var(--accent2);transform:rotate(45deg)}
+.check{height:36px;margin:64px -40px 0;background:
+ conic-gradient(#fff 25%,#12151d 0 50%,#fff 0 75%,#12151d 0) 0 0/36px 36px;}
+.check.t{margin-top:56px}
+h2.so{font-size:64px;margin:26px 0 20px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.cell{background:var(--card);border-radius:14px;padding:22px 26px 24px}
+.cell h4{font-size:26px;font-weight:700;color:#fff;margin-bottom:8px;line-height:1.25}
+.cell p{color:var(--dim);font-size:23px;line-height:1.45}
+.cell p b{color:#fff}
+.cell.wide{grid-column:1/-1}
+.dev h3{font-family:'Barlow Condensed',sans-serif;font-style:italic;font-weight:800;font-size:44px;color:#fff;margin:34px 0 4px}
+.dev h3:first-of-type{margin-top:0}
+.dev .mono{font-size:21px;color:#c3caff;background:var(--code);padding:1px 8px;border-radius:6px}
+.dev ul.b li{margin-top:10px}
+footer{margin-top:50px;text-align:center;color:var(--dim);font-size:22px;border-top:1px solid #262d44;padding-top:30px}
+footer b{color:#fff}
+</style>
+</head>
+<body>
+<div id="page">
+
+<div class="eyebrow">Trackmania · Openplanet plugin</div>
+<h1>Stream-Only HUD</h1>
+<p class="tag">Hide the <b>splits</b>, <b>timer</b> or <b>inputs</b> from your screen. <b>Your viewers still see them.</b></p>
+
+<div class="card">
+  <div class="card-h"><h2>What it can hide</h2></div>
+  <div class="tbl elem"><table>
+    <tr><th>Element</th><th>Source</th></tr>
+    <tr><td>Checkpoint splits</td><td>game <code>UIModule_Race_Checkpoint</code></td></tr>
+    <tr><td>Race timer</td><td>game <code>UIModule_Race_Chrono</code></td></tr>
+    <tr><td>Checkpoint &amp; lap counter</td><td>game <code>UIModule_Race_LapsCounter</code></td></tr>
+    <tr><td>Records panel</td><td>game <code>UIModule_Race_Record</code></td></tr>
+    <tr><td>Medals &amp; personal best</td><td>drawn by this plugin</td></tr>
+    <tr><td>Inputs (Dashboard)</td><td>the Dashboard plugin's pad (gamepad or keyboard)</td></tr>
+    <tr><td>Gear &amp; RPM (Dashboard)</td><td>the Dashboard plugin's gearbox</td></tr>
+    <tr><td>Speed (Dashboard)</td><td>the Dashboard plugin's speedometer</td></tr>
+  </table></div>
+</div>
+
+<!-- CP 1 -->
+<div class="card">
+  <div class="card-h"><div class="cp"><span>CP 1/4</span></div><h2>Install the plugin</h2><div class="where">Trackmania</div></div>
+  <div class="step"><div class="n">1</div><div class="body">Press <span class="key">F3</span></div></div>
+  <div class="step"><div class="n">2</div><div class="body">Click <b>Plugin Manager</b> at the top, then <b>Open manager</b>.</div></div>
+  <div class="step"><div class="n">3</div><div class="body">Search <b>Stream-Only HUD</b> and click <b>Install</b>. A setup window opens by itself.</div></div>
+
+  <div class="sub">
+    <h3>Installing from a folder or .op file instead</h3>
+    <div class="step"><div class="n">1</div><div class="body">Open <b>File Explorer</b>, paste this in the address bar and press&nbsp;<span class="key">Enter</span>:
+      <div class="codebox">%USERPROFILE%\OpenplanetNext\Plugins</div></div></div>
+    <div class="step"><div class="n">2</div><div class="body">Copy the <b>StreamOnlyHUD</b> folder (or <b>StreamOnlyHUD.op</b> from the GitHub releases) into that window.</div></div>
+    <div class="step"><div class="n">3</div><div class="body">In Trackmania press <span class="key">F3</span> then <b>Developer › Signature Mode › Developer</b>, then restart the game.</div></div>
+    <div class="heads"><b>Heads-up:</b> Developer mode switches off online play and leaderboard records. Switch Signature Mode back to <b>Regular</b> to race online (the plugin stops loading until it is installed from the Plugin Manager).</div>
+  </div>
+</div>
+
+<!-- CP 2 -->
+<div class="card">
+  <div class="card-h"><div class="cp"><span>CP 2/4</span></div><h2>Connect OBS</h2><div class="where">Only once</div></div>
+  <div class="step"><div class="n">1</div><div class="body">In OBS, in the <b>Sources</b> box, click <b>+</b> › <b>Browser</b> › <b>OK</b>.</div></div>
+  <div class="step"><div class="n">2</div><div class="body">In Trackmania's setup window, click <b>Copy OBS link</b>. It is:
+    <div class="codebox">http://127.0.0.1:7878/</div></div></div>
+  <div class="step"><div class="n">3</div><div class="body">Back in OBS, click in the <b>URL</b> box, delete what's there and press <span style="white-space:nowrap"><span class="key">Ctrl</span> + <span class="key">V</span>.</span></div></div>
+  <div class="step"><div class="n">4</div><div class="body">Set the size, then click <b>OK</b>:
+    <div class="size"><div>Width<b>1920</b></div><div>Height<b>1080</b></div></div></div></div>
+  <div class="step"><div class="n">5</div><div class="body">Right-click the new source › <b>Transform</b> › <b>Fit to screen</b>.</div></div>
+  <p class="note" style="margin-top:26px">Then click <b>Show a test picture in OBS</b> in Trackmania's window. A green banner should appear in OBS, and the window says <b>OBS is connected</b>:</p>
+  <div class="banner">✓ Stream-Only HUD is connected</div>
+</div>
+
+<!-- CP 3 -->
+<div class="card">
+  <div class="card-h"><div class="cp"><span>CP 3/4</span></div><h2>Choose what you see</h2><div class="where">Any time</div></div>
+  <p>Open the window: <span class="key">F3</span> › <b>Plugins</b> › <b>Stream-Only HUD</b>. Every item has two ticks:</p>
+  <div class="tbl" style="margin-top:20px"><table>
+    <tr><th>On my screen</th><th class="c">On stream</th><th>Result</th></tr>
+    <tr><td class="c"><span class="cb on"></span></td><td class="c"><span class="cb on lock"></span> <span style="color:var(--dim);font-size:22px">locked</span></td><td class="res-b">Everyone sees it</td></tr>
+    <tr><td class="c"><span class="cb"></span></td><td class="c"><span class="cb on"></span></td><td class="res-a">Only viewers see it</td></tr>
+    <tr><td class="c"><span class="cb"></span></td><td class="c"><span class="cb"></span></td><td class="res-c">Hidden for everyone</td></tr>
+  </table></div>
+  <p class="note">"On my screen but not on stream" isn't possible: OBS records your screen, so anything you can see is on stream too.</p>
+
+  <p style="margin-top:28px">Or click a quick button:</p>
+  <div class="pills"><span class="pill">Hide only the splits from me</span><span class="pill">Hide all times from me</span><span class="pill">Show everything normally</span></div>
+
+  <div class="f7"><div class="big">F7</div><div><b>Show/hide key:</b> press it during a run to see the hidden items yourself, and again to hide them. Your ticks don't change. Change the key (or turn it off) under the list.</div></div>
+
+  <ul class="b">
+    <li>The inputs, gear and speed boxes from the <b>Dashboard</b> plugin are in the same list.</li>
+    <li><b>Medals panel corner on stream</b> picks where the medals panel appears for viewers.</li>
+  </ul>
+</div>
+
+<!-- CP 4 -->
+<div class="card">
+  <div class="card-h"><div class="cp"><span>CP 4/4</span></div><h2>Good to know</h2><div class="where">Limits</div></div>
+  <ul class="b" style="margin-top:0">
+    <li>The checkpoint <b>sound</b> still plays (higher when ahead, lower when behind).</li>
+    <li>If Nadeo renames a module or its control IDs, that element simply shows normally again until the plugin is updated.</li>
+    <li>Other plugin windows can't be split between your screen and the stream: they are drawn into the game picture. That's why the medals panel is built in and the Dashboard parts are redrawn. Dashboard's gradient fills aren't copied (solid colours only).</li>
+  </ul>
+</div>
+
+<div class="check t"></div>
+<h2 class="so">Something off?</h2>
+<div class="grid">
+  <div class="cell"><h4>"OBS is not connected"</h4><p>The Browser source must be in the OBS scene you're using. Redo step 2 in that scene.</p></div>
+  <div class="cell"><h4>Seeing something twice</h4><p>Another plugin is drawing the same thing (like a second medals window). Turn that plugin's window off.</p></div>
+  <div class="cell"><h4>Hearing ahead / behind</h4><p>That's the checkpoint sound. Turn it down in Trackmania's audio settings.</p></div>
+  <div class="cell"><h4>Wrong size in OBS</h4><p>Things look shifted or too small? The source must be <b>1920 × 1080</b>, then <b>Transform › Fit to screen</b>. The test picture warns you when the size is wrong.</p></div>
+  <div class="cell wide"><h4>"Port is already in use"</h4><p>Another program uses the same connection. Pick another port in Openplanet <b>Settings › Stream-Only HUD › Advanced</b>, then copy the new link into OBS.</p></div>
+</div>
+
+<div class="check"></div>
+<h2 class="so">For developers</h2>
+<div class="card dev" style="margin-top:0">
+  <h3>How it works</h3>
+  <ul class="b" style="margin-top:12px">
+    <li><b>Hiding native HUD:</b> each module's root frame <span class="mono">frame-global</span> is moved off-screen. The game keeps running the module, so the plugin reads exactly what it would have shown (PB diff, colours, ranks).</li>
+    <li><b>Dashboard parts:</b> switched off through Openplanet's settings API when "On my screen" is unticked (and back on when re-ticked or on unload). The overlay redraws them from live car data using Dashboard's own position, size, colours and pad type.</li>
+    <li><b>Showing on stream:</b> a localhost-only HTTP server (<span class="mono">127.0.0.1:7878</span>) serves a full-screen overlay page and a live event stream (<span class="mono">/events</span>): HUD state 10x per second, car inputs up to 60x. In OBS it's a 1920x1080 Browser Source, with each element drawn where the game puts it.</li>
+    <li><b>Feedback:</b> the plugin sees when OBS is listening, shows "OBS is connected" and warns if hidden elements aren't reaching viewers. The test picture shows a green banner and sample elements for 30 seconds.</li>
+    <li><b>Show/hide key:</b> temporarily treats stream-only elements as "on my screen", and the overlay stops drawing them meanwhile so viewers never see them twice.</li>
+  </ul>
+
+  <h3>Building and publishing</h3>
+  <ul class="b" style="margin-top:12px">
+    <li>Run <span class="mono">pack.ps1</span> to build <span class="mono">dist\StreamOnlyHUD.op</span> (or download it from the latest GitHub release).</li>
+    <li>On openplanet.dev, create a new plugin, upload the <span class="mono">.op</span> and ask for it to be signed. The Openplanet team reviews it.</li>
+    <li>Once approved, it installs from the in-game Plugin Manager and updates arrive the same way.</li>
+  </ul>
+
+  <h3>Testing locally</h3>
+  <ul class="b" style="margin-top:12px">
+    <li>Copy the folder into <span class="mono">C:\Users\&lt;you&gt;\OpenplanetNext\Plugins\</span>.</li>
+    <li>Set <b>Developer › Signature Mode › Developer</b> (needs Club access), then <b>Developer › Load plugin</b>.</li>
+    <li>Check <span class="mono">Openplanet.log</span> for compile errors.</li>
+  </ul>
+</div>
+
+<footer>Stream-Only HUD · Openplanet plugin by <b>jypy</b> · MIT License<br><span style="white-space:nowrap">github.com/jypy933/tm-stream-only-hud</span></footer>
+</div>
+</body>
+</html>

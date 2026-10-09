@@ -18,6 +18,7 @@ namespace Server {
         uint64 openedAt;
         bool replied = false;
         bool streaming = false;
+        string request = "";   // bytes received so far, until the request line is complete
         Conn(Net::Socket@ s) { @sock = s; openedAt = Time::Now; }
     }
     array<Conn@> g_conns;
@@ -90,8 +91,12 @@ namespace Server {
             } else if (c.replied) {
                 done = true; // close one frame after writing so the reply is flushed
             } else if (c.sock.Available() > 0) {
-                c.streaming = Handle(c.sock, c.sock.ReadRaw(c.sock.Available()));
-                c.replied = true;
+                // A request can arrive in pieces: route it once the request line is complete.
+                c.request += c.sock.ReadRaw(c.sock.Available());
+                if (c.request.Contains("\r\n") || c.request.Length > 8192) {
+                    c.streaming = Handle(c.sock, c.request);
+                    c.replied = true;
+                }
             } else if (c.sock.IsHungUp() || Time::Now - c.openedAt > 3000) {
                 done = true;
             }
@@ -114,17 +119,13 @@ namespace Server {
         string msg = "";
         if (Time::Now >= g_nextState) {
             g_nextState = Time::Now + 100;
-            msg += "event: state
-data: " + Elements::StateJson(Preview) + "
-
-";
+            msg += "event: state\n"
+                + "data: " + Elements::StateJson(Preview) + "\n\n";
         }
         if (Time::Now >= g_nextVehicle && (Preview || Elements::NeedsVehicle())) {
             g_nextVehicle = Time::Now + 16;
-            msg += "event: vehicle
-data: " + Vehicle::Json() + "
-
-";
+            msg += "event: vehicle\n"
+                + "data: " + Vehicle::Json() + "\n\n";
         }
         if (msg.Length == 0) return;
 
@@ -142,24 +143,12 @@ data: " + Vehicle::Json() + "
 
         if (path == "/events") {
             sock.WriteRaw(
-                "HTTP/1.1 200 OK
-
-"
-                + "Content-Type: text/event-stream
-
-"
-                + "Cache-Control: no-store
-
-"
-                + "Connection: keep-alive
-
-"
-                + "
-
-"
-                + "retry: 1000
-
-"
+                "HTTP/1.1 200 OK\r\n"
+                + "Content-Type: text/event-stream\r\n"
+                + "Cache-Control: no-store\r\n"
+                + "Connection: keep-alive\r\n"
+                + "\r\n"
+                + "retry: 1000\n\n"
             );
             g_nextState = 0; // send the full state straight away
             return true;

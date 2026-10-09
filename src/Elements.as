@@ -77,8 +77,11 @@ class RecordsElement : NativeElement {
         medal["time"] = Label("label-medal-time");
         o["medal"] = medal;
 
+        // The leaderboard rows are map records: without record access serve none (the medal
+        // target above comes from the map itself and stays).
         auto rows = Json::Array();
-        for (uint i = 0; i < 30; i++) {
+        bool canView = Permissions::ViewRecords();
+        for (uint i = 0; canView && i < 30; i++) {
             auto row = cast<CGameManialinkFrame>(Ctrl("button-record-" + i));
             if (row is null) break;
             if (!row.Visible) continue;
@@ -187,9 +190,13 @@ namespace Elements {
         if (Time::Now < g_nextScan) return;
         g_nextScan = Time::Now + 250;
 
+        // On a server the playground lives on across maps, and a module's layer can be
+        // replaced: let go of any layer that is no longer in the list so the new one is found.
         bool missing = false;
         for (uint i = 0; i < Native.Length; i++) {
-            if (!Native[i].Attached) missing = true;
+            auto e = Native[i];
+            if (e.Attached && !HasLayer(cmap, e.layer)) e.Detach();
+            if (!e.Attached) missing = true;
         }
         if (!missing) return;
 
@@ -206,12 +213,26 @@ namespace Elements {
         }
     }
 
+    bool HasLayer(CGameManiaAppPlayground@ cmap, CGameUILayer@ layer) {
+        for (uint i = 0; i < cmap.UILayers.Length; i++) {
+            if (cmap.UILayers[i] is layer) return true;
+        }
+        return false;
+    }
+
     void RestoreAll() {
         for (uint i = 0; i < All.Length; i++) All[i].Detach();
     }
 
+    // Each element on its own, so one failure doesn't leave the others hidden.
     void ReleaseAll() {
-        for (uint i = 0; i < All.Length; i++) All[i].Release();
+        for (uint i = 0; i < All.Length; i++) {
+            try {
+                All[i].Release();
+            } catch {
+                error("Stream-Only HUD could not give back " + All[i].key + ": " + getExceptionInfo());
+            }
+        }
     }
 
     // Live car data is only worth sending when a Dashboard part is drawn by the overlay.
@@ -266,6 +287,6 @@ namespace Elements {
         for (uint i = 0; i < All.Length; i++) {
             if (All[i].OnOverlay) names.InsertLast(All[i].title);
         }
-        return string::Join(names, ", ");
+        return Text::Join(names, ", ");
     }
 }

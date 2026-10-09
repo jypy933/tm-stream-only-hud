@@ -1,0 +1,8 @@
+# Never let git convert line endings behind our back. Most sources are stored with CRLF in
+# the index and must stay byte-for-byte as committed; the few stored with LF are pinned to LF.
+* -text
+.gitignore text eol=lf
+LICENSE text eol=lf
+pack.ps1 text eol=lf
+src/Hotkey.as text eol=lf
+*.png binary

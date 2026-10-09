@@ -2,8 +2,8 @@
 name     = "Stream-Only HUD"
 author   = "jypy"
 category = "Overlay"
-version  = "0.4.0"
+version  = "1.0.0"
 
 [script]
 dependencies = [ "VehicleState" ]
-timeout = 0
+optional_dependencies = [ "Dashboard" ]   # load after Dashboard when it is installed, so its settings are there from the start

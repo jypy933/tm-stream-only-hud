@@ -20,23 +20,25 @@ namespace Window {
     void RenderContent() {
         RenderStatus();
         UI::Separator();
-        if (UI::BeginTabBar("tabs")) {
-            if (UI::BeginTabItem(Icons::Eye + " What shows where")) {
-                RenderElements();
-                UI::EndTabItem();
-            }
-            if (UI::BeginTabItem(Icons::Plug + " Connect to OBS")) {
-                RenderObsSetup();
-                UI::EndTabItem();
-            }
-            UI::EndTabBar();
+        UI::BeginTabBar("tabs");   // returns nothing in Openplanet, unlike ImGui
+        if (UI::BeginTabItem(Icons::Eye + " What shows where")) {
+            RenderElements();
+            UI::EndTabItem();
         }
+        if (UI::BeginTabItem(Icons::Plug + " Connect to OBS")) {
+            RenderObsSetup();
+            UI::EndTabItem();
+        }
+        UI::EndTabBar();
     }
 
     // One line that answers "is everything working?"
     void RenderStatus() {
         string overlayOnly = Elements::OverlayNames();
-        if (!Server::IsRunning()) {
+        if (g_stopped) {
+            UI::Text("\\$f44" + Icons::ExclamationTriangle + " The plugin stopped after an error, so your HUD is back to normal.");
+            UI::TextWrapped("Turn Stream-Only HUD off and on again in the Plugin Manager to try again.");
+        } else if (!Server::IsRunning()) {
             UI::Text("\\$f44" + Icons::ExclamationTriangle + " Problem: " + Server::LastError());
             UI::TextWrapped("Close the other program using it, or pick another port in Openplanet Settings > Stream-Only HUD > Advanced, then copy the new OBS link.");
         } else if (Server::ObsConnected()) {

@@ -34,6 +34,8 @@ class MedalsElement : Element {
     }
 
     int ReadPb(CGameManiaAppPlayground@ cmap, const string &in mapUid) {
+        // Editions without record access (e.g. Starter) get no PB row; the medals stay.
+        if (!Permissions::ViewRecords()) return -1;
         if (cmap.ScoreMgr is null || cmap.UserMgr is null || cmap.UserMgr.Users.Length == 0) return -1;
         uint t = cmap.ScoreMgr.Map_GetRecord_v2(cmap.UserMgr.Users[0].Id, mapUid, "PersonalBest", "", "TimeAttack", "");
         if (t == 0 || t == uint(-1)) return -1;

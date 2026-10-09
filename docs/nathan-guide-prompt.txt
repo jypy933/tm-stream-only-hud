@@ -1,0 +1,60 @@
+Create a finished portrait illustrated README guide for "Stream-Only HUD", for streamer NathanChupo. Use case: infographic-diagram. High-resolution portrait around 1536 x 3072. The supplied image is only a loose color/style reference. Completely replace its dense instructions: the new guide must be MUCH simpler, with only the exact short copy below. Four big numbered steps, large readable text, simple illustrated button chips, clear arrows, no tables, no developer section, no extra features, no troubleshooting wall. A person should follow it without knowing computers.
+
+Look: premium dark charcoal racing poster, electric violet numbers, warm white text, lime-green success accents, bold italic condensed headings, playful chequered finish stripe. Very readable large body type. Funny Pepe / peepo / Pepega green frog emote stickers: one drooling vacant peepo proudly pressing F3 with one finger; a delusional racing-helmet peepo thinking "surely PB"; a little focused peepo pointing at OBS; a happy celebratory peepo at the bottom. Light affectionate jabs about Nathan's streaming and driving, never cruel. Frogs in margins with plenty of space; never crowd or obscure text. Five-second visual hierarchy. Not a mockup, just the final image.
+
+ALL EXACT COPY, use no other instructional text:
+
+HEADER:
+STREAM-ONLY HUD
+NathanChupo's extremely easy guide
+You see road. Chat sees splits.
+Your delusion stays fully operational.
+
+SMALL START BOX:
+No Openplanet yet?
+Download link below → close Trackmania → run the installer.
+Choose the folder with Trackmania.exe → reopen the game.
+
+STEP ONE:
+1  GET THE PLUGIN
+In Trackmania, press F3.
+Plugin Manager → Open manager
+Search "Stream-Only HUD" → Install
+It downloads and installs itself. Good frog.
+
+STEP TWO:
+2  CONNECT OBS
+Keep Trackmania and OBS open on the same PC.
+In the plugin: Connect to OBS → Copy OBS link.
+In OBS: Sources → + → Browser → OK.
+Paste the link into URL.
+Width: 1920     Height: 1080
+Click OK.
+Right-click the new source → Transform → Fit to screen.
+Drag it ABOVE your game capture.
+The link goes in OBS, Nathan. Not Twitch chat.
+
+STEP THREE:
+3  HIDE THE SPLITS
+Back in the plugin: What shows where.
+Click "Hide only the splits from me".
+That's it. You don't see them. Viewers do.
+Lost the window? F3 → Plugins → Stream-Only HUD.
+
+STEP FOUR:
+4  CHECK IT. THEN SEND IT.
+Connect to OBS → Show a test picture in OBS.
+Green Connected banner in your OBS preview? Success.
+Click "Stop test picture". Go drive.
+
+BIG KEYCAP FOOTER:
+F7 = PEEK
+Press once to see your hidden splits.
+Press again to hide them.
+
+BOTTOM:
+Built by jypy for NathanChupo.
+Hides the splits. Does not fix the driving.
+Links are below. You may now stop reading.
+
+Requirements: All text accurately spelled and sharp. URL is not printed since Copy OBS link is used. Make "1920" and "1080" clear and unambiguous. Four steps exactly and a small F7 footer. The majority of the area should be simple instructions, with 4 small expressive frog emotes offering comic relief. Avoid miniature text. No recreated old guide content. No permissions, code, settings tables, feature lists, legal copy or technical explanations in the poster. Do not claim this plugin is already published.
